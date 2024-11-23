@@ -3,6 +3,7 @@ import pandas as pd
 import datetime as dt
 import gspread
 from google.oauth2.service_account import Credentials
+import matplotlib.pyplot as plt
 
 # Inicializar `st.session_state` si no está definido
 if "cartas_db" not in st.session_state:
@@ -109,4 +110,35 @@ if not st.session_state.cartas_db.empty:
                         worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS' (índice 7 en hoja = columna G)
                         break
             st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}' en la hoja de cálculo.")
+# --- Dashboard de Estadísticas ---
+st.header("📊 Dashboard de Estadísticas")
 
+# 1. Gráfica: Número de Cartas por Estatus
+st.subheader("📌 Número de Cartas por Estatus")
+fig1, ax1 = plt.subplots()
+st.session_state.cartas_db["Estatus"].value_counts().plot(kind="bar", ax=ax1)
+ax1.set_title("Número de Cartas por Estatus")
+ax1.set_xlabel("Estatus")
+ax1.set_ylabel("Cantidad")
+st.pyplot(fig1)
+
+# 2. Gráfica: Número de Cartas por Responsable
+st.subheader("👩‍💼👨‍💼 Número de Cartas por Responsable")
+fig2, ax2 = plt.subplots()
+st.session_state.cartas_db["Trabajador"].value_counts().plot(kind="bar", ax=ax2)
+ax2.set_title("Número de Cartas por Responsable")
+ax2.set_xlabel("Responsable")
+ax2.set_ylabel("Cantidad")
+st.pyplot(fig2)
+
+# 3. Gráfica: Cartas por Fecha de Notificación (Histograma)
+st.subheader("🗓️ Cartas por Fecha de Notificación")
+if not st.session_state.cartas_db.empty:
+    fig3, ax3 = plt.subplots()
+    st.session_state.cartas_db["Fecha_Notificación"].value_counts().sort_index().plot(kind="bar", ax=ax3)
+    ax3.set_title("Número de Cartas por Fecha de Notificación")
+    ax3.set_xlabel("Fecha")
+    ax3.set_ylabel("Cantidad")
+    st.pyplot(fig3)
+else:
+    st.warning("No hay datos para mostrar en esta gráfica.")
