@@ -1,0 +1,19 @@
+import streamlit as st
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+import json
+
+# Obtener las credenciales desde Streamlit Secrets
+creds_json = st.secrets["gspread_creds"]
+
+# Convertir las credenciales a un diccionario
+creds_dict = json.loads(creds_json)
+
+# Autenticación con Google Sheets usando las credenciales de Streamlit Secrets
+def auth_google_sheets():
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
+    client = gspread.authorize(creds)
+    return client
+
+client = auth_google_sheets()
