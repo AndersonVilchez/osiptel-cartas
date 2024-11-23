@@ -2,6 +2,20 @@ import streamlit as st
 import pandas as pd
 import datetime as dt
 import plotly.express as px
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+
+# --- Configuración de Google Sheets ---
+def obtener_hoja_de_calculo():
+    # Usa las credenciales del archivo de Streamlit Secrets
+    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread_creds"], scope)
+    client = gspread.authorize(creds)
+    
+    # Abre tu hoja de cálculo en Google Sheets (asegúrate de que el archivo ya existe)
+    spreadsheet = client.open("Nombre de tu Hoja de Cálculo")
+    worksheet = spreadsheet.sheet1  # O puedes seleccionar otro sheet si es necesario
+    return worksheet
 
 # Inicialización de la base de datos en la sesión
 if "cartas_db" not in st.session_state:
@@ -48,6 +62,14 @@ with st.form("nueva_carta_form"):
             [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
             ignore_index=True
         )
+
+        # Guardar la carta en Google Sheets
+        worksheet = obtener_hoja_de_calculo()
+        worksheet.append_row([nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
+                              nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
+                              nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
+                              nueva_carta["Fecha_Respuesta"], nueva_carta["Número_Carta_Respuesta"]])
+        
         st.success("Carta registrada correctamente.")
 
 # --- Sección 2: Actualizar estado ---
@@ -67,6 +89,11 @@ if not st.session_state.cartas_db.empty:
             st.session_state.cartas_db.loc[index, "Número_Carta_Respuesta"] = numero_respuesta
             st.session_state.cartas_db.loc[index, "Fecha_Respuesta"] = fecha_respuesta
             st.success("Carta actualizada correctamente.")
+            
+            # Guardar los cambios en Google Sheets
+            worksheet = obtener_hoja_de_calculo()
+            row = worksheet.findall(str(id_carta))[0].row  # Encontrar la fila por ID
+            worksheet.update(f"B{row}:I{row}", [[estatus, numero_respuesta, fecha_respuesta]])
 else:
     st.warning("No hay cartas registradas para actualizar.")
 
@@ -76,15 +103,11 @@ if not st.session_state.cartas_db.empty:
     # Mostrar tabla completa
     st.subheader("Base de Datos de Cartas")
     st.dataframe(st.session_state.cartas_db)
-
+    
     # Gráfico de evolución de cartas por mes
     st.subheader("Evolución Mensual de Cartas")
     cartas_db = st.session_state.cartas_db.copy()
     cartas_db["Mes"] = pd.to_datetime(cartas_db["Fecha_Notificación"]).dt.to_period("M")
-    grafico_mensual = cartas_db.groupby("Mes").size().reset_index(name="Cantidad")
-    grafico_mensual["Mes"] = grafico_mensual["Mes"].astype(str)  # Convertir Period a string para compatibilidad con Plotly
-    fig = px.bar(grafico_mensual, x="Mes", y="Cantidad", title="Evolución Mensual de Cartas")
+    cartas_por_mes = cartas_db.groupby("Mes").size().reset_index(name="Cantidad")
+    fig = px.bar(cartas_por_mes, x="Mes", y="Cantidad", title="Evolución Mensual de Cartas")
     st.plotly_chart(fig)
-else:
-    st.warning("No hay datos suficientes para mostrar.")
-
