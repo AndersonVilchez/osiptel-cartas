@@ -51,8 +51,6 @@ with st.form("nueva_carta_form"):
     nombre_carta = st.text_input("Nombre de la Carta")
     fecha_notificacion = st.date_input("Fecha de Notificación")
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
-    carta_respuesta = st.text_input("Carta de Respuesta (Opcional)")
-    fecha_respuesta = st.date_input("Fecha de Respuesta (Opcional)", value=None)
 
     if st.form_submit_button("Registrar Carta"):
         fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)
@@ -65,8 +63,8 @@ with st.form("nueva_carta_form"):
             "Días_Hábiles": dias_habiles,
             "Fecha_Límite": fecha_limite,
             "Estatus": "Pendiente",
-            "Fecha_Respuesta": fecha_respuesta if fecha_respuesta else None,
-            "Número_Carta_Respuesta": carta_respuesta if carta_respuesta else None
+            "Fecha_Respuesta": None,
+            "Número_Carta_Respuesta": None
         }
 
         st.session_state.cartas_db = pd.concat(
@@ -82,8 +80,7 @@ with st.form("nueva_carta_form"):
                 nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
                 nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
                 nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
-                nueva_carta["Fecha_Respuesta"].strftime("%Y-%m-%d") if nueva_carta["Fecha_Respuesta"] else None,
-                nueva_carta["Número_Carta_Respuesta"]
+                None, None  # Inicializamos Fecha de Respuesta y Carta de Respuesta como vacíos
             ])
 
 # --- Sección 2: Actualizar estado ---
