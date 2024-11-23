@@ -127,6 +127,7 @@ with st.form("nueva_carta_form"):
 
 # --- Sección 2: Actualizar estado ---
 st.header("✅ Actualizar Estado de Carta")
+
 if not datos.empty and "Nombre de la Carta" in datos.columns:
     with st.form("actualizar_estado_form"):
         # Crear un filtro basado en el "Nombre de la Carta"
@@ -143,19 +144,27 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
             # Nuevo estado
             nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"], 
                                         index=["Pendiente", "Respondida", "Archivada"].index(carta_filtrada["STATUS"].values[0]))
-            nueva_carta_respuesta = st.text_input("Nueva Carta de Respuesta (Opcional)", 
-                                                  value=carta_filtrada["Carta de Respuesta"].values[0] if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else "")
 
-            # Fecha de respuesta manejada de forma segura
+            # Nueva carta de respuesta
+            nueva_carta_respuesta = st.text_input(
+                "Nueva Carta de Respuesta (Opcional)",
+                value=str(carta_filtrada["Carta de Respuesta"].values[0]) if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else ""
+            )
+
+            # Manejar la fecha de forma segura
             fecha_actual = None
             try:
                 if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]):
                     fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date()
             except Exception:
-                pass
-            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual or dt.date.today())
+                fecha_actual = None  # Asignar None si la fecha no es válida
 
-            # Botón para actualizar
+            nueva_fecha_respuesta = st.date_input(
+                "Nueva Fecha de Respuesta (Opcional)",
+                value=fecha_actual if fecha_actual else dt.date.today()
+            )
+
+            # Botón de envío
             submit_button = st.form_submit_button("Actualizar Estado")
             if submit_button:
                 # Actualizar datos en Google Sheets
@@ -165,7 +174,7 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                     for idx, fila in enumerate(filas):
                         if idx == 0:  # Ignorar encabezados
                             continue
-                        if fila[2] == carta_seleccionada:  # 'Nombre de la Carta'
+                        if fila[2] == carta_seleccionada:  # Comparar por 'Nombre de la Carta'
                             worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
                             worksheet.update_cell(idx + 1, 10, nueva_carta_respuesta)  # Columna 'Carta de Respuesta'
                             worksheet.update_cell(idx + 1, 9, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
