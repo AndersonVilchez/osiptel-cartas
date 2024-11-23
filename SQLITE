@@ -1,0 +1,51 @@
+import sqlite3
+import streamlit as st
+import pandas as pd
+
+# Conectar a la base de datos SQLite (si no existe, la crea)
+conn = sqlite3.connect('mi_base_de_datos.db')
+cursor = conn.cursor()
+
+# Crear una tabla en la base de datos si no existe
+cursor.execute('''
+    CREATE TABLE IF NOT EXISTS datos (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        nombre TEXT,
+        valor REAL,
+        fecha TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+''')
+conn.commit()
+
+# Función para insertar datos en la base de datos
+def insertar_datos(nombre, valor):
+    cursor.execute('''
+        INSERT INTO datos (nombre, valor) VALUES (?, ?)
+    ''', (nombre, valor))
+    conn.commit()
+
+# Función para obtener datos de la base de datos
+def obtener_datos():
+    query = 'SELECT * FROM datos ORDER BY fecha DESC'
+    df = pd.read_sql(query, conn)
+    return df
+
+# Crear la interfaz en Streamlit
+st.title('Aplicación de Datos en Tiempo Real')
+
+# Crear los campos de entrada de datos
+nombre = st.text_input('Nombre')
+valor = st.number_input('Valor', min_value=0.0)
+
+# Botón para insertar datos
+if st.button('Enviar'):
+    insertar_datos(nombre, valor)
+    st.success('Datos enviados exitosamente')
+
+# Mostrar los datos almacenados en la base de datos
+st.subheader('Datos almacenados:')
+df = obtener_datos()
+st.dataframe(df)
+
+# Opcionalmente, puedes configurar para que la página se recargue cada ciertos segundos
+st.experimental_rerun()
