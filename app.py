@@ -1,10 +1,9 @@
-
 import streamlit as st
 import pandas as pd
 import datetime as dt
 import plotly.express as px
 
-# Inicialización de la base de datos
+# Inicialización de la base de datos en la sesión
 if "cartas_db" not in st.session_state:
     st.session_state.cartas_db = pd.DataFrame(columns=[
         "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación", 
@@ -12,12 +11,12 @@ if "cartas_db" not in st.session_state:
         "Fecha_Respuesta", "Número_Carta_Respuesta"
     ])
 
-# Función para calcular la fecha límite (sumando días hábiles)
+# Función para calcular la fecha límite (excluye fines de semana)
 def calcular_fecha_limite(fecha_inicio, dias_habiles):
     fecha = fecha_inicio
     while dias_habiles > 0:
         fecha += dt.timedelta(days=1)
-        if fecha.weekday() < 5:  # Excluye sábados y domingos
+        if fecha.weekday() < 5:  # Excluye sábados (5) y domingos (6)
             dias_habiles -= 1
     return fecha
 
@@ -55,9 +54,8 @@ with st.form("nueva_carta_form"):
 st.header("✅ Actualizar Estado de Carta")
 if not st.session_state.cartas_db.empty:
     with st.form("actualizar_estado_form"):
-        id_carta = st.selectbox("Seleccionar Carta (ID - Nombre)", 
-                                st.session_state.cartas_db["ID"].astype(str) + " - " +
-                                st.session_state.cartas_db["Nombre_Carta"])
+        opciones_carta = st.session_state.cartas_db["ID"].astype(str) + " - " + st.session_state.cartas_db["Nombre_Carta"]
+        id_carta = st.selectbox("Seleccionar Carta (ID - Nombre)", opciones_carta)
         id_carta = int(id_carta.split(" - ")[0])
         estatus = st.selectbox("Estatus", ["Pendiente", "Atendida"])
         numero_respuesta = st.text_input("Número de Carta de Respuesta (Opcional)")
@@ -81,17 +79,12 @@ if not st.session_state.cartas_db.empty:
 
     # Gráfico de evolución de cartas por mes
     st.subheader("Evolución Mensual de Cartas")
-    st.session_state.cartas_db["Mes"] = pd.to_datetime(
-        st.session_state.cartas_db["Fecha_Notificación"]
-    ).dt.to_period("M")
-    grafico_mensual = st.session_state.cartas_db.groupby("Mes").size().reset_index(name="Cantidad")
-    fig = px.line(grafico_mensual, x="Mes", y="Cantidad", title="Evolución Mensual de Cartas")
-    st.plotly_chart(fig)
-
-    # Gráfico de cartas por trabajador
-    st.subheader("Cartas por Trabajador")
-    grafico_trabajador = st.session_state.cartas_db.groupby(["Trabajador", "Estatus"]).size().reset_index(name="Cantidad")
-    fig = px.bar(grafico_trabajador, x="Trabajador", y="Cantidad", color="Estatus", title="Cartas por Trabajador")
+    cartas_db = st.session_state.cartas_db.copy()
+    cartas_db["Mes"] = pd.to_datetime(cartas_db["Fecha_Notificación"]).dt.to_period("M")
+    grafico_mensual = cartas_db.groupby("Mes").size().reset_index(name="Cantidad")
+    grafico_mensual["Mes"] = grafico_mensual["Mes"].astype(str)  # Convertir Period a string para compatibilidad con Plotly
+    fig = px.bar(grafico_mensual, x="Mes", y="Cantidad", title="Evolución Mensual de Cartas")
     st.plotly_chart(fig)
 else:
-    st.warning("No hay datos para visualizar.")
+    st.warning("No hay datos suficientes para mostrar.")
+
