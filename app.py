@@ -152,13 +152,14 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
 
             # Manejar la fecha de forma segura
             try:
-                fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date() if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]) else None
+                fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date() if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]) else dt.date.today()
             except Exception:
-                fecha_actual = None  # Si no es válida, asigna None
-            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual if fecha_actual else dt.date.today())
+                fecha_actual = dt.date.today()  # Si no es válida, asigna la fecha actual
+            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual)
 
             # Botón para actualizar
-            if st.form_submit_button("Actualizar Estado"):
+            submit_button = st.form_submit_button("Actualizar Estado")
+            if submit_button:
                 # Reflejar los cambios en la hoja de Google Sheets
                 worksheet = obtener_hoja_de_calculo()
                 if worksheet:
