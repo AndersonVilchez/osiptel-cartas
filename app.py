@@ -2,17 +2,21 @@ import streamlit as st
 import pandas as pd
 import datetime as dt
 import gspread
-from oauth2client.service_account import ServiceAccountCredentials
+from google.auth.transport.requests import Request
+from google.auth import credentials
+from google.oauth2.service_account import Credentials
 
 # Función para conectarse a Google Sheets usando las credenciales de Streamlit Secrets
 def obtener_hoja_de_calculo():
     # Definir el alcance de la API de Google Sheets y Google Drive
     scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-    
-    # Usar las credenciales de Streamlit Secrets
-    creds = ServiceAccountCredentials.from_json_keyfile_dict(st.secrets["gspread_creds"], scope)
+
+    # Cargar las credenciales de Streamlit Secrets
+    creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
+
+    # Autenticación con las credenciales
     client = gspread.authorize(creds)
-    
+
     # Abre la hoja de cálculo de Google Sheets por su ID (en lugar de usar su nombre)
     spreadsheet = client.open_by_key("1Ke5AF0EuMr2Q2QBWym9gQ2lbQ_6-JUknQN9Kdysp86w")
     worksheet = spreadsheet.sheet1  # Accede a la primera hoja
@@ -64,6 +68,8 @@ with st.form("nueva_carta_form"):
             ignore_index=True
         )
         st.success("Carta registrada correctamente.")
+
+# --- Resto del código para actualizar y visualizar ---
 
         # Guardar en Google Sheets después de registrar la carta
         worksheet = obtener_hoja_de_calculo()
