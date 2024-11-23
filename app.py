@@ -50,24 +50,25 @@ with st.form("nueva_carta_form"):
     fecha_notificacion = st.date_input("Fecha de Notificación")
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
     
-    if st.form_submit_button("Registrar Carta"):
-        fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)
-        nueva_carta = {
-            "ID": len(st.session_state.cartas_db) + 1,
-            "Trabajador": trabajador,
-            "Nombre_Carta": nombre_carta,
-            "Fecha_Notificación": fecha_notificacion,
-            "Días_Hábiles": dias_habiles,
-            "Fecha_Límite": fecha_limite,
-            "Estatus": "Pendiente",
-            "Fecha_Respuesta": None,
-            "Número_Carta_Respuesta": None
-        }
-        st.session_state.cartas_db = pd.concat(
-            [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
-            ignore_index=True
-        )
-        st.success("Carta registrada correctamente.")
+if st.form_submit_button("Registrar Carta"):
+    fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  # Asegúrate de que esto esté calculado antes
+    nueva_carta = {
+        "ID": len(st.session_state.cartas_db) + 1,
+        "Trabajador": trabajador,
+        "Nombre_Carta": nombre_carta,
+        "Fecha_Notificación": fecha_notificacion,
+        "Días_Hábiles": dias_habiles,
+        "Fecha_Límite": fecha_limite,
+        "Estatus": "Pendiente",
+        "Fecha_Respuesta": None,
+        "Número_Carta_Respuesta": None
+    }
+    st.session_state.cartas_db = pd.concat(
+        [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
+        ignore_index=True
+    )
+    st.success("Carta registrada correctamente.")
+
 
 # --- Resto del código para actualizar y visualizar ---
 
