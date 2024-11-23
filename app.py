@@ -125,7 +125,7 @@ with st.form("nueva_carta_form"):
             ])
         st.success("Carta registrada correctamente.")
 
-# --- Sección 2: Actualizar estado ---
+# --- Sección 2: Actualizar Estado ---
 st.header("✅ Actualizar Estado de Carta")
 
 if not datos.empty and "Nombre de la Carta" in datos.columns:
@@ -139,11 +139,11 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
         if not carta_filtrada.empty:
             # Mostrar los datos actuales de la carta seleccionada
             st.write("### Datos Actuales de la Carta")
-            st.write(carta_filtrada[["Nombre de la Carta", "STATUS", "Carta de Respuesta", "Fecha de Respuesta"]])
+            st.write(carta_filtrada[["Nombre de la Carta", "Estado", "Carta de Respuesta", "Fecha de Respuesta"]])
 
             # Nuevo estado
             nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"], 
-                                        index=["Pendiente", "Respondida", "Archivada"].index(carta_filtrada["STATUS"].values[0]))
+                                        index=["Pendiente", "Respondida", "Archivada"].index(carta_filtrada["Estado"].values[0]))
 
             # Nueva carta de respuesta
             nueva_carta_respuesta = st.text_input(
@@ -173,7 +173,7 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                         if idx == 0:  # Ignorar encabezados
                             continue
                         if fila[2] == carta_seleccionada:  # Comparar por 'Nombre de la Carta'
-                            worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
+                            worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'Estado'
                             worksheet.update_cell(idx + 1, 9, nueva_carta_respuesta)  # Columna 'Carta de Respuesta'
                             worksheet.update_cell(idx + 1, 8, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
                             break
