@@ -7,8 +7,8 @@ from google.oauth2.service_account import Credentials
 # Inicializar `st.session_state` si no está definido
 if "cartas_db" not in st.session_state:
     st.session_state.cartas_db = pd.DataFrame(columns=[
-        "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación",
-        "Días_Hábiles", "Fecha_Límite", "Estatus",
+        "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación", 
+        "Días_Hábiles", "Fecha_Límite", "Estatus", 
         "Fecha_Respuesta", "Número_Carta_Respuesta"
     ])
 
@@ -51,10 +51,10 @@ with st.form("nueva_carta_form"):
     nombre_carta = st.text_input("Nombre de la Carta")
     fecha_notificacion = st.date_input("Fecha de Notificación")
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
-
+    
     if st.form_submit_button("Registrar Carta"):
-        fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)
-
+        fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  
+        
         nueva_carta = {
             "ID": len(st.session_state.cartas_db) + 1,
             "Trabajador": trabajador,
@@ -66,7 +66,7 @@ with st.form("nueva_carta_form"):
             "Fecha_Respuesta": None,
             "Número_Carta_Respuesta": None
         }
-
+        
         st.session_state.cartas_db = pd.concat(
             [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
             ignore_index=True
@@ -80,7 +80,7 @@ with st.form("nueva_carta_form"):
                 nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
                 nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
                 nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
-                None, None  # Inicializamos Fecha de Respuesta y Carta de Respuesta como vacíos
+                nueva_carta["Fecha_Respuesta"], nueva_carta["Número_Carta_Respuesta"]
             ])
 
 # --- Sección 2: Actualizar estado ---
@@ -90,20 +90,14 @@ if not st.session_state.cartas_db.empty:
         opciones_carta = st.session_state.cartas_db["ID"].astype(str) + " - " + st.session_state.cartas_db["Nombre_Carta"]
         carta_seleccionada = st.selectbox("Seleccionar Carta", opciones_carta)
         nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
-        carta_respuesta = st.text_input("Actualizar Carta de Respuesta (Opcional)")
-        fecha_respuesta = st.date_input("Actualizar Fecha de Respuesta (Opcional)", value=None)
 
         if st.form_submit_button("Actualizar Estado"):
             # Obtener ID de la carta seleccionada
             carta_id = int(carta_seleccionada.split(" - ")[0])
-
-            # Actualizar en la base de datos local
+            
+            # Actualizar el estado en la base de datos local
             st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Estatus"] = nuevo_estado
-            if carta_respuesta:
-                st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Número_Carta_Respuesta"] = carta_respuesta
-            if fecha_respuesta:
-                st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Fecha_Respuesta"] = fecha_respuesta
-
+            
             # Reflejar los cambios en la hoja de Google Sheets
             worksheet = obtener_hoja_de_calculo()
             if worksheet:
@@ -111,19 +105,7 @@ if not st.session_state.cartas_db.empty:
                 for idx, fila in enumerate(filas):
                     if idx == 0:  # Salta la fila de encabezados
                         continue
-                    if int(fila[0]) == carta_id:  # Compara con la columna 'ID'
-                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS' (índice 7)
-                        if carta_respuesta:
-                            worksheet.update_cell(idx + 1, 9, carta_respuesta)  # Columna 'Número_Carta_Respuesta'
-                        if fecha_respuesta:
-                            worksheet.update_cell(idx + 1, 8, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha_Respuesta'
+                    if int(fila[0]) == carta_id:  # Compara con la columna 'ID' (índice 0)
+                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS' (índice 7 en hoja = columna G)
                         break
-            st.success(f"Estado de la carta {carta_id} actualizado correctamente.")
-
-# --- Mostrar la base de datos en tabla ---
-st.header("📋 Base de Datos de Cartas")
-if not st.session_state.cartas_db.empty:
-    st.dataframe(st.session_state.cartas_db)
-else:
-    st.warning("No hay datos para mostrar.")
-
+            st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}' en la hoja de cálculo.")
