@@ -92,15 +92,21 @@ if not st.session_state.cartas_db.empty:
         nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
 
         if st.form_submit_button("Actualizar Estado"):
+            # Obtener ID de la carta seleccionada
             carta_id = int(carta_seleccionada.split(" - ")[0])
+            
+            # Actualizar el estado en la base de datos local
             st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Estatus"] = nuevo_estado
             
+            # Reflejar los cambios en la hoja de Google Sheets
             worksheet = obtener_hoja_de_calculo()
             if worksheet:
-                filas = worksheet.get_all_records()
-                for idx, fila in enumerate(filas, start=2):  # La primera fila es para los encabezados
-                    if int(fila["ID"]) == carta_id:
-                        worksheet.update_cell(idx, 7, nuevo_estado)  # Columna "Estatus"
+                filas = worksheet.get_all_values()  # Obtiene todas las filas incluyendo encabezados
+                for idx, fila in enumerate(filas):
+                    if idx == 0:  # Salta la fila de encabezados
+                        continue
+                    if int(fila[0]) == carta_id:  # Compara con la columna 'ID' (índice 0)
+                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS' (índice 7 en hoja = columna G)
                         break
             st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}' en la hoja de cálculo.")
 
