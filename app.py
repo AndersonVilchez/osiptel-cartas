@@ -151,18 +151,16 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                 value=str(carta_filtrada["Carta de Respuesta"].values[0]) if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else ""
             )
 
-            # Manejar la fecha de forma segura
-            fecha_actual = None
+            # Validación estricta para la fecha de respuesta
             try:
                 if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]):
                     fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date()
+                else:
+                    fecha_actual = dt.date.today()  # Fecha predeterminada
             except Exception:
-                fecha_actual = None  # Asignar None si la fecha no es válida
-
-            nueva_fecha_respuesta = st.date_input(
-                "Nueva Fecha de Respuesta (Opcional)",
-                value=fecha_actual if fecha_actual else dt.date.today()
-            )
+                fecha_actual = dt.date.today()  # En caso de error, usar la fecha actual
+            
+            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual)
 
             # Botón de envío
             submit_button = st.form_submit_button("Actualizar Estado")
@@ -176,9 +174,10 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                             continue
                         if fila[2] == carta_seleccionada:  # Comparar por 'Nombre de la Carta'
                             worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
-                            worksheet.update_cell(idx + 1, 10, nueva_carta_respuesta)  # Columna 'Carta de Respuesta'
-                            worksheet.update_cell(idx + 1, 9, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
+                            worksheet.update_cell(idx + 1, 9, nueva_carta_respuesta)  # Columna 'Carta de Respuesta'
+                            worksheet.update_cell(idx + 1, 8, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
                             break
                 st.success(f"Estado de la carta '{carta_seleccionada}' actualizado correctamente.")
 else:
     st.warning("No hay datos disponibles o la columna 'Nombre de la Carta' no está presente en los datos.")
+
