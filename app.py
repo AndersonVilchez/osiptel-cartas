@@ -3,6 +3,7 @@ import pandas as pd
 import datetime as dt
 import gspread
 from google.oauth2.service_account import Credentials
+import matplotlib.pyplot as plt
 
 # Inicializar `st.session_state` si no está definido
 if "cartas_db" not in st.session_state:
@@ -32,6 +33,19 @@ def obtener_hoja_de_calculo():
         st.error(f"Error al obtener la hoja de cálculo: {e}")
         return None
 
+# Función para cargar los datos desde la hoja de Google Sheets
+def cargar_datos():
+    worksheet = obtener_hoja_de_calculo()
+    if worksheet:
+        datos = worksheet.get_all_records()
+        return pd.DataFrame(datos)
+    else:
+        return pd.DataFrame(columns=[
+            "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación",
+            "Días_Hábiles", "Fecha_Límite", "Estatus",
+            "Fecha_Respuesta", "Número_Carta_Respuesta"
+        ])
+
 # Función para calcular la fecha límite (excluye fines de semana)
 def calcular_fecha_limite(fecha_inicio, dias_habiles):
     fecha = fecha_inicio
@@ -43,6 +57,35 @@ def calcular_fecha_limite(fecha_inicio, dias_habiles):
 
 # Título principal
 st.title("Gestión de Cartas de OSIPTEL")
+
+# --- Dashboard ---
+st.header("📊 Dashboard de Estadísticas")
+datos = cargar_datos()
+
+if not datos.empty:
+    # Gráfica: Número de cartas por estatus
+    st.subheader("Número de Cartas por Estatus")
+    fig1, ax1 = plt.subplots()
+    datos["Estatus"].value_counts().plot(kind="bar", ax=ax1, color="skyblue")
+    ax1.set_title("Número de Cartas por Estatus")
+    ax1.set_xlabel("Estatus")
+    ax1.set_ylabel("Cantidad")
+    st.pyplot(fig1)
+
+    # Gráfica: Número de cartas por responsable
+    st.subheader("Número de Cartas por Responsable")
+    fig2, ax2 = plt.subplots()
+    datos["Trabajador"].value_counts().plot(kind="bar", ax=ax2, color="orange")
+    ax2.set_title("Número de Cartas por Responsable")
+    ax2.set_xlabel("Responsable")
+    ax2.set_ylabel("Cantidad")
+    st.pyplot(fig2)
+
+    # Tabla de datos
+    st.subheader("📋 Base de Datos Completa")
+    st.dataframe(datos)
+else:
+    st.warning("No hay datos para mostrar en el dashboard. Por favor, ingresa nuevas cartas.")
 
 # --- Sección 1: Ingresar nueva carta ---
 st.header("📩 Ingresar Nueva Carta")
@@ -56,7 +99,7 @@ with st.form("nueva_carta_form"):
         fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)
 
         nueva_carta = {
-            "ID": len(st.session_state.cartas_db) + 1,
+            "ID": len(datos) + 1,
             "Trabajador": trabajador,
             "Nombre_Carta": nombre_carta,
             "Fecha_Notificación": fecha_notificacion,
@@ -85,9 +128,9 @@ with st.form("nueva_carta_form"):
 
 # --- Sección 2: Actualizar estado ---
 st.header("✅ Actualizar Estado de Carta")
-if not st.session_state.cartas_db.empty:
+if not datos.empty:
     with st.form("actualizar_estado_form"):
-        opciones_carta = st.session_state.cartas_db["ID"].astype(str) + " - " + st.session_state.cartas_db["Nombre_Carta"]
+        opciones_carta = datos["ID"].astype(str) + " - " + datos["Nombre de la Carta"]
         carta_seleccionada = st.selectbox("Seleccionar Carta", opciones_carta)
         nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
         carta_respuesta = st.text_input("Actualizar Carta de Respuesta (Opcional)")
@@ -96,13 +139,6 @@ if not st.session_state.cartas_db.empty:
         if st.form_submit_button("Actualizar Estado"):
             # Obtener ID de la carta seleccionada
             carta_id = int(carta_seleccionada.split(" - ")[0])
-
-            # Actualizar en la base de datos local
-            st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Estatus"] = nuevo_estado
-            if carta_respuesta:
-                st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Número_Carta_Respuesta"] = carta_respuesta
-            if fecha_respuesta:
-                st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Fecha_Respuesta"] = fecha_respuesta
 
             # Reflejar los cambios en la hoja de Google Sheets
             worksheet = obtener_hoja_de_calculo()
@@ -119,4 +155,3 @@ if not st.session_state.cartas_db.empty:
                             worksheet.update_cell(idx + 1, 8, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha_Respuesta'
                         break
             st.success(f"Estado de la carta {carta_id} actualizado correctamente.")
-
