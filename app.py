@@ -13,7 +13,7 @@ def obtener_hoja_de_calculo():
     client = gspread.authorize(creds)
     
     # Abre tu hoja de cálculo en Google Sheets (asegúrate de que el archivo ya existe)
-    spreadsheet = client.open("Nombre de tu Hoja de Cálculo")
+    spreadsheet = client.open("Gestión de Cartas")
     worksheet = spreadsheet.sheet1  # O puedes seleccionar otro sheet si es necesario
     return worksheet
 
