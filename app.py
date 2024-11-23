@@ -110,15 +110,9 @@ with st.form("nueva_carta_form"):
             "Días Hábiles": dias_habiles,
             "FECHA LÍMITE": fecha_limite,
             "STATUS": "Pendiente",
-            "Fecha de Respuesta": None,
-            "Carta de Respuesta": None
+            "Fecha de Respuesta": "",
+            "Carta de Respuesta": ""
         }
-
-        st.session_state.cartas_db = pd.concat(
-            [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
-            ignore_index=True
-        )
-        st.success("Carta registrada correctamente.")
 
         # Guardar en Google Sheets
         worksheet = obtener_hoja_de_calculo()
@@ -127,8 +121,10 @@ with st.form("nueva_carta_form"):
                 nueva_carta["ID"], nueva_carta["Responsable"], nueva_carta["Nombre de la Carta"],
                 nueva_carta["Fecha de Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días Hábiles"],
                 nueva_carta["FECHA LÍMITE"].strftime("%Y-%m-%d"), nueva_carta["STATUS"],
-                None, None  # Inicializamos Fecha de Respuesta y Carta de Respuesta como vacíos
+                nueva_carta["Fecha de Respuesta"], nueva_carta["Carta de Respuesta"]
             ])
+        st.success("Carta registrada correctamente.")
+
 # --- Sección 2: Actualizar estado ---
 st.header("✅ Actualizar Estado de Carta")
 if not datos.empty and "Nombre de la Carta" in datos.columns:
@@ -148,32 +144,31 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
             nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"], 
                                         index=["Pendiente", "Respondida", "Archivada"].index(carta_filtrada["STATUS"].values[0]))
             nueva_carta_respuesta = st.text_input("Nueva Carta de Respuesta (Opcional)", 
-                                                  value=str(carta_filtrada["Carta de Respuesta"].values[0]) if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else "")
+                                                  value=carta_filtrada["Carta de Respuesta"].values[0] if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else "")
 
-            # Manejar la fecha de forma segura
+            # Fecha de respuesta manejada de forma segura
+            fecha_actual = None
             try:
-                fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date() if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]) else dt.date.today()
+                if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]):
+                    fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date()
             except Exception:
-                fecha_actual = dt.date.today()  # Si no es válida, asigna la fecha actual
-            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual)
+                pass
+            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual or dt.date.today())
 
             # Botón para actualizar
             submit_button = st.form_submit_button("Actualizar Estado")
             if submit_button:
-                # Reflejar los cambios en la hoja de Google Sheets
+                # Actualizar datos en Google Sheets
                 worksheet = obtener_hoja_de_calculo()
                 if worksheet:
-                    filas = worksheet.get_all_values()  # Obtiene todas las filas incluyendo encabezados
+                    filas = worksheet.get_all_values()  # Todas las filas
                     for idx, fila in enumerate(filas):
-                        if idx == 0:  # Salta la fila de encabezados
+                        if idx == 0:  # Ignorar encabezados
                             continue
-                        if fila[2] == carta_seleccionada:  # Compara con la columna 'Nombre de la Carta'
-                            worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Actualizar 'STATUS'
-                            worksheet.update_cell(idx + 1, 10, nueva_carta_respuesta)  # Actualizar 'Carta de Respuesta'
-                            if nueva_fecha_respuesta:
-                                worksheet.update_cell(idx + 1, 9, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Actualizar 'Fecha de Respuesta'
-                            else:
-                                worksheet.update_cell(idx + 1, 9, "")  # Limpiar 'Fecha de Respuesta' si está vacío
+                        if fila[2] == carta_seleccionada:  # 'Nombre de la Carta'
+                            worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
+                            worksheet.update_cell(idx + 1, 10, nueva_carta_respuesta)  # Columna 'Carta de Respuesta'
+                            worksheet.update_cell(idx + 1, 9, nueva_fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
                             break
                 st.success(f"Estado de la carta '{carta_seleccionada}' actualizado correctamente.")
 else:
