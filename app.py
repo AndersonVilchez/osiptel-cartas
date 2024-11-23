@@ -119,3 +119,11 @@ if not st.session_state.cartas_db.empty:
                             worksheet.update_cell(idx + 1, 8, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha_Respuesta'
                         break
             st.success(f"Estado de la carta {carta_id} actualizado correctamente.")
+
+# --- Mostrar la base de datos en tabla ---
+st.header("📋 Base de Datos de Cartas")
+if not st.session_state.cartas_db.empty:
+    st.dataframe(st.session_state.cartas_db)
+else:
+    st.warning("No hay datos para mostrar.")
+
