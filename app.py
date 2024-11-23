@@ -51,26 +51,28 @@ with st.form("nueva_carta_form"):
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
     
     if st.form_submit_button("Registrar Carta"):
-    fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  # Asegúrate de que esto esté calculado antes
-    nueva_carta = {
-        "ID": len(st.session_state.cartas_db) + 1,
-        "Trabajador": trabajador,
-        "Nombre_Carta": nombre_carta,
-        "Fecha_Notificación": fecha_notificacion,
-        "Días_Hábiles": dias_habiles,
-        "Fecha_Límite": fecha_limite,
-        "Estatus": "Pendiente",
-        "Fecha_Respuesta": None,
-        "Número_Carta_Respuesta": None
-    }
-    st.session_state.cartas_db = pd.concat(
-        [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
-        ignore_index=True
-    )
-    st.success("Carta registrada correctamente.")
-
-
-# --- Resto del código para actualizar y visualizar ---
+        # Asegúrate de que esto esté calculado antes de crear la nueva carta
+        fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  
+        
+        # Crear el diccionario con los datos de la nueva carta
+        nueva_carta = {
+            "ID": len(st.session_state.cartas_db) + 1,
+            "Trabajador": trabajador,
+            "Nombre_Carta": nombre_carta,
+            "Fecha_Notificación": fecha_notificacion,
+            "Días_Hábiles": dias_habiles,
+            "Fecha_Límite": fecha_limite,
+            "Estatus": "Pendiente",
+            "Fecha_Respuesta": None,
+            "Número_Carta_Respuesta": None
+        }
+        
+        # Actualizar la base de datos en la sesión
+        st.session_state.cartas_db = pd.concat(
+            [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
+            ignore_index=True
+        )
+        st.success("Carta registrada correctamente.")
 
         # Guardar en Google Sheets después de registrar la carta
         worksheet = obtener_hoja_de_calculo()
@@ -84,24 +86,11 @@ st.header("✅ Actualizar Estado de Carta")
 if not st.session_state.cartas_db.empty:
     with st.form("actualizar_estado_form"):
         opciones_carta = st.session_state.cartas_db["ID"].astype(str) + " - " + st.session_state.cartas_db["Nombre_Carta"]
-        id_carta = st.selectbox("Seleccionar Carta (ID - Nombre)", opciones_carta)
-        id_carta = int(id_carta.split(" - ")[0])
-        estatus = st.selectbox("Estatus", ["Pendiente", "Atendida"])
-        numero_respuesta = st.text_input("Número de Carta de Respuesta (Opcional)")
-        fecha_respuesta = st.date_input("Fecha de Respuesta (Opcional)", dt.date.today())
-        
-        if st.form_submit_button("Actualizar Carta"):
-            index = st.session_state.cartas_db.index[st.session_state.cartas_db["ID"] == id_carta][0]
-            st.session_state.cartas_db.loc[index, "Estatus"] = estatus
-            st.session_state.cartas_db.loc[index, "Número_Carta_Respuesta"] = numero_respuesta
-            st.session_state.cartas_db.loc[index, "Fecha_Respuesta"] = fecha_respuesta
-            st.success("Carta actualizada correctamente.")
+        carta_seleccionada = st.selectbox("Seleccionar Carta", opciones_carta)
+        nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
 
-            # Actualizar la hoja de Google Sheets
-            worksheet = obtener_hoja_de_calculo()
-            row = [id_carta, trabajador, nombre_carta, fecha_notificacion.strftime("%Y-%m-%d"),
-                   dias_habiles, fecha_limite.strftime("%Y-%m-%d"), estatus, fecha_respuesta, numero_respuesta]
-            worksheet.update_row(index+2, row)
+        if st.form_submit_button("Actualizar Estado"):
+            carta_id = carta_seleccionada.split(" - ")[0]
+            st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == int(carta_id), "Estatus"] = nuevo_estado
+            st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}'.")
 
-else:
-    st.warning("No hay cartas registradas para actualizar.")
