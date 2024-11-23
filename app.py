@@ -50,7 +50,7 @@ with st.form("nueva_carta_form"):
     fecha_notificacion = st.date_input("Fecha de Notificación")
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
     
-if st.form_submit_button("Registrar Carta"):
+    if st.form_submit_button("Registrar Carta"):
     fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  # Asegúrate de que esto esté calculado antes
     nueva_carta = {
         "ID": len(st.session_state.cartas_db) + 1,
