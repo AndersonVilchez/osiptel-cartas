@@ -1,33 +1,36 @@
+import streamlit as st
 import pandas as pd
 import datetime as dt
 import gspread
-from google.auth.transport.requests import Request
-from google.auth import credentials
 from google.oauth2.service_account import Credentials
 
-# Función para conectarse a Google Sheets usando las credenciales de Streamlit Secrets
-def obtener_hoja_de_calculo():
-    # Definir el alcance de la API de Google Sheets y Google Drive
-    scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-
-    # Cargar las credenciales de Streamlit Secrets
-    creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
-
-    # Autenticación con las credenciales
-    client = gspread.authorize(creds)
-
-    # Abre la hoja de cálculo de Google Sheets por su ID (en lugar de usar su nombre)
-    spreadsheet = client.open_by_key("1Ke5AF0EuMr2Q2QBWym9gQ2lbQ_6-JUknQN9Kdysp86w")
-    worksheet = spreadsheet.sheet1  # Accede a la primera hoja
-    return worksheet
-
-# Inicialización de la base de datos en la sesión
+# Inicializar `st.session_state` si no está definido
 if "cartas_db" not in st.session_state:
     st.session_state.cartas_db = pd.DataFrame(columns=[
         "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación", 
         "Días_Hábiles", "Fecha_Límite", "Estatus", 
         "Fecha_Respuesta", "Número_Carta_Respuesta"
     ])
+
+# Función para conectarse a Google Sheets usando las credenciales
+def obtener_hoja_de_calculo():
+    try:
+        # Definir el alcance de la API de Google Sheets y Google Drive
+        scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+
+        # Cargar las credenciales de Streamlit Secrets
+        creds = Credentials.from_service_account_info(st.secrets["gspread_creds"], scopes=scope)
+
+        # Autenticación con las credenciales
+        client = gspread.authorize(creds)
+
+        # Abre la hoja de cálculo de Google Sheets por su ID
+        spreadsheet = client.open_by_key("1Ke5AF0EuMr2Q2QBWym9gQ2lbQ_6-JUknQN9Kdysp86w")
+        worksheet = spreadsheet.sheet1  # Accede a la primera hoja
+        return worksheet
+    except Exception as e:
+        st.error(f"Error al obtener la hoja de cálculo: {e}")
+        return None
 
 # Función para calcular la fecha límite (excluye fines de semana)
 def calcular_fecha_limite(fecha_inicio, dias_habiles):
@@ -50,10 +53,8 @@ with st.form("nueva_carta_form"):
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
     
     if st.form_submit_button("Registrar Carta"):
-        # Asegúrate de que esto esté calculado antes de crear la nueva carta
         fecha_limite = calcular_fecha_limite(fecha_notificacion, dias_habiles)  
         
-        # Crear el diccionario con los datos de la nueva carta
         nueva_carta = {
             "ID": len(st.session_state.cartas_db) + 1,
             "Trabajador": trabajador,
@@ -66,19 +67,21 @@ with st.form("nueva_carta_form"):
             "Número_Carta_Respuesta": None
         }
         
-        # Actualizar la base de datos en la sesión
         st.session_state.cartas_db = pd.concat(
             [st.session_state.cartas_db, pd.DataFrame([nueva_carta])],
             ignore_index=True
         )
         st.success("Carta registrada correctamente.")
 
-        # Guardar en Google Sheets después de registrar la carta
+        # Guardar en Google Sheets
         worksheet = obtener_hoja_de_calculo()
-        worksheet.append_row([nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
-                              nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
-                              nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
-                              nueva_carta["Fecha_Respuesta"], nueva_carta["Número_Carta_Respuesta"]])
+        if worksheet:
+            worksheet.append_row([
+                nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
+                nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
+                nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
+                nueva_carta["Fecha_Respuesta"], nueva_carta["Número_Carta_Respuesta"]
+            ])
 
 # --- Sección 2: Actualizar estado ---
 st.header("✅ Actualizar Estado de Carta")
@@ -89,6 +92,15 @@ if not st.session_state.cartas_db.empty:
         nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
 
         if st.form_submit_button("Actualizar Estado"):
-            carta_id = carta_seleccionada.split(" - ")[0]
-            st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == int(carta_id), "Estatus"] = nuevo_estado
-            st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}'.")
+            carta_id = int(carta_seleccionada.split(" - ")[0])
+            st.session_state.cartas_db.loc[st.session_state.cartas_db["ID"] == carta_id, "Estatus"] = nuevo_estado
+            
+            worksheet = obtener_hoja_de_calculo()
+            if worksheet:
+                filas = worksheet.get_all_records()
+                for idx, fila in enumerate(filas, start=2):  # La primera fila es para los encabezados
+                    if int(fila["ID"]) == carta_id:
+                        worksheet.update_cell(idx, 7, nuevo_estado)  # Columna "Estatus"
+                        break
+            st.success(f"Estado de la carta {carta_id} actualizado a '{nuevo_estado}' en la hoja de cálculo.")
+
