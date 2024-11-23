@@ -129,11 +129,11 @@ with st.form("nueva_carta_form"):
                 nueva_carta["FECHA LÍMITE"].strftime("%Y-%m-%d"), nueva_carta["STATUS"],
                 None, None  # Inicializamos Fecha de Respuesta y Carta de Respuesta como vacíos
             ])
-
 # --- Sección 2: Actualizar estado ---
 st.header("✅ Actualizar Estado de Carta")
-if not datos.empty:
+if not datos.empty and "ID" in datos.columns and "Nombre de la Carta" in datos.columns:
     with st.form("actualizar_estado_form"):
+        # Crear opciones para seleccionar cartas
         opciones_carta = datos["ID"].astype(str) + " - " + datos["Nombre de la Carta"]
         carta_seleccionada = st.selectbox("Seleccionar Carta", opciones_carta)
         nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"])
@@ -141,7 +141,7 @@ if not datos.empty:
         fecha_respuesta = st.date_input("Actualizar Fecha de Respuesta (Opcional)", value=None)
 
         if st.form_submit_button("Actualizar Estado"):
-            # Obtener ID de la carta seleccionada
+            # Obtener el ID de la carta seleccionada
             carta_id = int(carta_seleccionada.split(" - ")[0])
 
             # Reflejar los cambios en la hoja de Google Sheets
@@ -152,10 +152,12 @@ if not datos.empty:
                     if idx == 0:  # Salta la fila de encabezados
                         continue
                     if int(fila[0]) == carta_id:  # Compara con la columna 'ID'
-                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
+                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Actualizar 'STATUS'
                         if carta_respuesta:
-                            worksheet.update_cell(idx + 1, 10, carta_respuesta)  # Columna 'Carta de Respuesta'
+                            worksheet.update_cell(idx + 1, 10, carta_respuesta)  # Actualizar 'Carta de Respuesta'
                         if fecha_respuesta:
-                            worksheet.update_cell(idx + 1, 9, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
+                            worksheet.update_cell(idx + 1, 9, fecha_respuesta.strftime("%Y-%m-%d"))  # Actualizar 'Fecha de Respuesta'
                         break
             st.success(f"Estado de la carta {carta_id} actualizado correctamente.")
+else:
+    st.warning("Las columnas 'ID' y 'Nombre de la Carta' no están disponibles en los datos.")
