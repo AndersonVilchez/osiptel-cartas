@@ -8,9 +8,8 @@ import matplotlib.pyplot as plt
 # Inicializar `st.session_state` si no está definido
 if "cartas_db" not in st.session_state:
     st.session_state.cartas_db = pd.DataFrame(columns=[
-        "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación",
-        "Días_Hábiles", "Fecha_Límite", "Estatus",
-        "Fecha_Respuesta", "Número_Carta_Respuesta"
+        "ID", "Responsable", "Nombre de la Carta", "Fecha de Notificación",
+        "Días Hábiles", "FECHA LÍMITE", "STATUS", "Fecha de Respuesta", "Carta de Respuesta"
     ])
 
 # Función para conectarse a Google Sheets usando las credenciales
@@ -41,9 +40,8 @@ def cargar_datos():
         return pd.DataFrame(datos)
     else:
         return pd.DataFrame(columns=[
-            "ID", "Trabajador", "Nombre_Carta", "Fecha_Notificación",
-            "Días_Hábiles", "Fecha_Límite", "Estatus",
-            "Fecha_Respuesta", "Número_Carta_Respuesta"
+            "ID", "Responsable", "Nombre de la Carta", "Fecha de Notificación",
+            "Días Hábiles", "FECHA LÍMITE", "STATUS", "Fecha de Respuesta", "Carta de Respuesta"
         ])
 
 # Función para calcular la fecha límite (excluye fines de semana)
@@ -63,23 +61,29 @@ st.header("📊 Dashboard de Estadísticas")
 datos = cargar_datos()
 
 if not datos.empty:
-    # Gráfica: Número de cartas por estatus
-    st.subheader("Número de Cartas por Estatus")
-    fig1, ax1 = plt.subplots()
-    datos["Estatus"].value_counts().plot(kind="bar", ax=ax1, color="skyblue")
-    ax1.set_title("Número de Cartas por Estatus")
-    ax1.set_xlabel("Estatus")
-    ax1.set_ylabel("Cantidad")
-    st.pyplot(fig1)
+    if "STATUS" in datos.columns:
+        # Gráfica: Número de cartas por estatus
+        st.subheader("Número de Cartas por Estatus")
+        fig1, ax1 = plt.subplots()
+        datos["STATUS"].value_counts().plot(kind="bar", ax=ax1, color="skyblue")
+        ax1.set_title("Número de Cartas por Estatus")
+        ax1.set_xlabel("STATUS")
+        ax1.set_ylabel("Cantidad")
+        st.pyplot(fig1)
+    else:
+        st.warning("La columna 'STATUS' no está presente en los datos.")
 
-    # Gráfica: Número de cartas por responsable
-    st.subheader("Número de Cartas por Responsable")
-    fig2, ax2 = plt.subplots()
-    datos["Trabajador"].value_counts().plot(kind="bar", ax=ax2, color="orange")
-    ax2.set_title("Número de Cartas por Responsable")
-    ax2.set_xlabel("Responsable")
-    ax2.set_ylabel("Cantidad")
-    st.pyplot(fig2)
+    if "Responsable" in datos.columns:
+        # Gráfica: Número de cartas por responsable
+        st.subheader("Número de Cartas por Responsable")
+        fig2, ax2 = plt.subplots()
+        datos["Responsable"].value_counts().plot(kind="bar", ax=ax2, color="orange")
+        ax2.set_title("Número de Cartas por Responsable")
+        ax2.set_xlabel("Responsable")
+        ax2.set_ylabel("Cantidad")
+        st.pyplot(fig2)
+    else:
+        st.warning("La columna 'Responsable' no está presente en los datos.")
 
     # Tabla de datos
     st.subheader("📋 Base de Datos Completa")
@@ -90,7 +94,7 @@ else:
 # --- Sección 1: Ingresar nueva carta ---
 st.header("📩 Ingresar Nueva Carta")
 with st.form("nueva_carta_form"):
-    trabajador = st.selectbox("Responsable", ["Britcia", "Rosaly", "Anderson", "Renato", "Marisol"])
+    responsable = st.selectbox("Responsable", ["Anderson", "Renato", "Marisol"])
     nombre_carta = st.text_input("Nombre de la Carta")
     fecha_notificacion = st.date_input("Fecha de Notificación")
     dias_habiles = st.number_input("Días Hábiles para Responder", min_value=1, step=1)
@@ -100,14 +104,14 @@ with st.form("nueva_carta_form"):
 
         nueva_carta = {
             "ID": len(datos) + 1,
-            "Trabajador": trabajador,
-            "Nombre_Carta": nombre_carta,
-            "Fecha_Notificación": fecha_notificacion,
-            "Días_Hábiles": dias_habiles,
-            "Fecha_Límite": fecha_limite,
-            "Estatus": "Pendiente",
-            "Fecha_Respuesta": None,
-            "Número_Carta_Respuesta": None
+            "Responsable": responsable,
+            "Nombre de la Carta": nombre_carta,
+            "Fecha de Notificación": fecha_notificacion,
+            "Días Hábiles": dias_habiles,
+            "FECHA LÍMITE": fecha_limite,
+            "STATUS": "Pendiente",
+            "Fecha de Respuesta": None,
+            "Carta de Respuesta": None
         }
 
         st.session_state.cartas_db = pd.concat(
@@ -120,9 +124,9 @@ with st.form("nueva_carta_form"):
         worksheet = obtener_hoja_de_calculo()
         if worksheet:
             worksheet.append_row([
-                nueva_carta["ID"], nueva_carta["Trabajador"], nueva_carta["Nombre_Carta"],
-                nueva_carta["Fecha_Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días_Hábiles"],
-                nueva_carta["Fecha_Límite"].strftime("%Y-%m-%d"), nueva_carta["Estatus"],
+                nueva_carta["ID"], nueva_carta["Responsable"], nueva_carta["Nombre de la Carta"],
+                nueva_carta["Fecha de Notificación"].strftime("%Y-%m-%d"), nueva_carta["Días Hábiles"],
+                nueva_carta["FECHA LÍMITE"].strftime("%Y-%m-%d"), nueva_carta["STATUS"],
                 None, None  # Inicializamos Fecha de Respuesta y Carta de Respuesta como vacíos
             ])
 
@@ -148,10 +152,10 @@ if not datos.empty:
                     if idx == 0:  # Salta la fila de encabezados
                         continue
                     if int(fila[0]) == carta_id:  # Compara con la columna 'ID'
-                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS' (índice 7)
+                        worksheet.update_cell(idx + 1, 7, nuevo_estado)  # Columna 'STATUS'
                         if carta_respuesta:
-                            worksheet.update_cell(idx + 1, 9, carta_respuesta)  # Columna 'Número_Carta_Respuesta'
+                            worksheet.update_cell(idx + 1, 10, carta_respuesta)  # Columna 'Carta de Respuesta'
                         if fecha_respuesta:
-                            worksheet.update_cell(idx + 1, 8, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha_Respuesta'
+                            worksheet.update_cell(idx + 1, 9, fecha_respuesta.strftime("%Y-%m-%d"))  # Columna 'Fecha de Respuesta'
                         break
             st.success(f"Estado de la carta {carta_id} actualizado correctamente.")
