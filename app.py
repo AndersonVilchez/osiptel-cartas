@@ -145,8 +145,10 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
             st.write(carta_filtrada[["Nombre de la Carta", "STATUS", "Carta de Respuesta", "Fecha de Respuesta"]])
 
             # Nuevo estado
-            nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"], index=0)
-            nueva_carta_respuesta = st.text_input("Nueva Carta de Respuesta (Opcional)", value=str(carta_filtrada["Carta de Respuesta"].values[0]))
+            nuevo_estado = st.selectbox("Nuevo Estado", ["Pendiente", "Respondida", "Archivada"], 
+                                        index=["Pendiente", "Respondida", "Archivada"].index(carta_filtrada["STATUS"].values[0]))
+            nueva_carta_respuesta = st.text_input("Nueva Carta de Respuesta (Opcional)", 
+                                                  value=str(carta_filtrada["Carta de Respuesta"].values[0]) if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else "")
             nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", 
                                                   value=pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]) if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]) else None)
 
@@ -170,3 +172,4 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                 st.success(f"Estado de la carta '{carta_seleccionada}' actualizado correctamente.")
 else:
     st.warning("No hay datos disponibles o la columna 'Nombre de la Carta' no está presente en los datos.")
+
