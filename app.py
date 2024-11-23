@@ -151,18 +151,14 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                                                   value=str(carta_filtrada["Carta de Respuesta"].values[0]) if pd.notna(carta_filtrada["Carta de Respuesta"].values[0]) else "")
 
             # Manejar la fecha de forma segura
-            fecha_actual = None
-            if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]):
-                try:
-                    fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0])
-                except Exception:
-                    fecha_actual = None
-
-            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual)
+            try:
+                fecha_actual = pd.to_datetime(carta_filtrada["Fecha de Respuesta"].values[0]).date() if pd.notna(carta_filtrada["Fecha de Respuesta"].values[0]) else None
+            except Exception:
+                fecha_actual = None  # Si no es válida, asigna None
+            nueva_fecha_respuesta = st.date_input("Nueva Fecha de Respuesta (Opcional)", value=fecha_actual if fecha_actual else dt.date.today())
 
             # Botón para actualizar
-            submit_button = st.form_submit_button("Actualizar Estado")
-            if submit_button:
+            if st.form_submit_button("Actualizar Estado"):
                 # Reflejar los cambios en la hoja de Google Sheets
                 worksheet = obtener_hoja_de_calculo()
                 if worksheet:
@@ -181,5 +177,3 @@ if not datos.empty and "Nombre de la Carta" in datos.columns:
                 st.success(f"Estado de la carta '{carta_seleccionada}' actualizado correctamente.")
 else:
     st.warning("No hay datos disponibles o la columna 'Nombre de la Carta' no está presente en los datos.")
-
-
